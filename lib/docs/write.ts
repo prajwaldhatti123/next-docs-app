@@ -1,6 +1,6 @@
 import "server-only";
 import { put, del, list } from "@vercel/blob";
-import { revalidateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
 
 export function sanitizeName(name: string): string {
   return name
@@ -13,8 +13,7 @@ export function sanitizeName(name: string): string {
 }
 
 function clearDocsCache() {
-  // @ts-expect-error - Next.js canary types require 'profile' arg but runtime does not
-  revalidateTag("docs");
+  revalidatePath("/", "layout");
 }
 
 export async function readRawDoc(
