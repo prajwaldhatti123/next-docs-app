@@ -41,7 +41,11 @@ export async function saveDoc(
   content: string,
 ): Promise<void> {
   const path = `content/${stream}/${slug.join("/")}.mdx`;
-  await put(path, content, { access: "public", addRandomSuffix: false });
+  await put(path, content, {
+    access: "public",
+    addRandomSuffix: false,
+    allowOverwrite: true,
+  });
   clearDocsCache();
 }
 
@@ -60,7 +64,11 @@ export async function createDoc(
   if (blobs.some((b) => b.pathname === path))
     throw new Error(`File already exists.`);
   const content = `---\ntitle: "${title}"\ndescription: ""\norder: 99\n---\n\n# ${title}\n\nStart writing here…\n`;
-  await put(path, content, { access: "public", addRandomSuffix: false });
+  await put(path, content, {
+    access: "public",
+    addRandomSuffix: false,
+    allowOverwrite: true,
+  });
   clearDocsCache();
   return { content, slug: safeSlug };
 }
@@ -80,7 +88,11 @@ export async function createFolder(
   if (blobs.some((b) => b.pathname === path))
     throw new Error(`Folder already exists.`);
   const indexStr = `---\ntitle: "${title}"\ndescription: ""\norder: 99\n---\n\n# ${title}\n`;
-  await put(path, indexStr, { access: "public", addRandomSuffix: false });
+  await put(path, indexStr, {
+    access: "public",
+    addRandomSuffix: false,
+    allowOverwrite: true,
+  });
   clearDocsCache();
 }
 
@@ -95,10 +107,12 @@ export async function createStream(
   await put(`content/${safe}/welcome.mdx`, welcome, {
     access: "public",
     addRandomSuffix: false,
+    allowOverwrite: true,
   });
   await put(`content/${safe}/_meta.json`, JSON.stringify(meta, null, 2), {
     access: "public",
     addRandomSuffix: false,
+    allowOverwrite: true,
   });
   clearDocsCache();
 }
@@ -121,6 +135,7 @@ export async function updateStreamMeta(
   await put(path, JSON.stringify({ ...existing, ...meta }, null, 2), {
     access: "public",
     addRandomSuffix: false,
+    allowOverwrite: true,
   });
   clearDocsCache();
 }
