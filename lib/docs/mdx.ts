@@ -51,7 +51,10 @@ export const getMdxRawSource = unstable_cache(
     }
   },
   ["mdx-raw-cache"],
-  { tags: ["docs"], revalidate: 3600 },
+  {
+    tags: ["docs"],
+    revalidate: process.env.NODE_ENV === "development" ? 0 : 3600,
+  },
 );
 
 export async function compileMdx(

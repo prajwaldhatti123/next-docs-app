@@ -123,7 +123,7 @@ async function buildSidebar(stream: string): Promise<SidebarItem[]> {
 
 export const getSidebar = unstable_cache(buildSidebar, ["sidebar-cache"], {
   tags: ["docs"],
-  revalidate: 3600,
+  revalidate: process.env.NODE_ENV === "development" ? 0 : 3600,
 });
 
 export function flattenSidebar(items: SidebarItem[]): SidebarItem[] {

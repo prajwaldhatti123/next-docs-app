@@ -113,7 +113,10 @@ async function fetchStreamList(): Promise<StreamMeta[]> {
 export const getAvailableStreams = unstable_cache(
   fetchStreamList,
   ["available-streams"],
-  { tags: ["docs"], revalidate: 3600 },
+  {
+    tags: ["docs"],
+    revalidate: process.env.NODE_ENV === "development" ? 0 : 3600,
+  },
 );
 
 export async function getStreamMeta(slug: string): Promise<StreamMeta | null> {
