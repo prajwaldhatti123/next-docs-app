@@ -99,7 +99,8 @@ export async function proxy(request: NextRequest) {
     // Stream-level RBAC check for /docs/[stream]/...
     const stream = extractStream(pathname);
     if (stream) {
-      const hasAccess = session.teams.includes(stream.toLowerCase());
+      const isAdmin = session.role === "admin";
+      const hasAccess = isAdmin || session.teams.includes(stream.toLowerCase());
       if (!hasAccess) {
         // User is authenticated but not authorized for this stream
         // Return 403 JSON for API calls, redirect to dashboard for page nav

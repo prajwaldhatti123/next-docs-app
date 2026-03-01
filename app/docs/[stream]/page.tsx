@@ -13,7 +13,8 @@ export default async function StreamIndexPage({ params }: StreamPageProps) {
   // Defence in depth: verify session
   const session = await getSession();
   if (!session) redirect("/login");
-  if (!session.teams.includes(stream)) redirect("/dashboard?error=forbidden");
+  if (session.role !== "admin" && !session.teams.includes(stream))
+    redirect("/dashboard?error=forbidden");
 
   const meta = await getStreamMeta(stream);
   if (!meta) notFound();
