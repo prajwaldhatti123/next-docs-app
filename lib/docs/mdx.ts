@@ -53,7 +53,7 @@ export const getMdxRawSource = unstable_cache(
   ["mdx-raw-cache"],
   {
     tags: ["docs"],
-    revalidate: process.env.NODE_ENV === "development" ? 0 : 3600,
+    revalidate: process.env.NODE_ENV === "development" ? false : 3600,
   },
 );
 
