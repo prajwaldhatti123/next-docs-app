@@ -25,7 +25,7 @@ export function CsrfProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Called once per page mount — idempotent endpoint returns same token
-    fetch("/api/csrf")
+    fetch("/api/csrf", { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => {
         setCsrfToken(d.token ?? "");

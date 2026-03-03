@@ -34,12 +34,28 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const existing = request.cookies.get(CSRF_COOKIE)?.value;
   if (existing && isValidToken(existing, secret)) {
     // Return the same token — no new cookie needed, client already has it
-    return NextResponse.json({ token: existing }, { status: 200 });
+    return NextResponse.json(
+      { token: existing },
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "no-store, max-age=0",
+        },
+      },
+    );
   }
 
   // Generate a fresh token (first visit, or expired/invalid cookie)
   const token = generateCsrfToken();
-  const response = NextResponse.json({ token }, { status: 200 });
+  const response = NextResponse.json(
+    { token },
+    {
+      status: 200,
+      headers: {
+        "Cache-Control": "no-store, max-age=0",
+      },
+    },
+  );
   setCsrfCookie(response, token);
   return response;
 }

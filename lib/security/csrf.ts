@@ -57,16 +57,28 @@ export function validateCsrfToken(request: NextRequest): boolean {
   const headerToken = request.headers.get(CSRF_HEADER);
   const cookieToken = request.cookies.get(CSRF_COOKIE)?.value;
 
-  if (!headerToken || !cookieToken) return false;
+  console.log("[CSRF] Header:", headerToken);
+  console.log("[CSRF] Cookie:", cookieToken);
+
+  if (!headerToken || !cookieToken) {
+    console.log("[CSRF] Missing token");
+    return false;
+  }
 
   // Ensure same length before Buffer comparison
-  if (headerToken.length !== cookieToken.length) return false;
+  if (headerToken.length !== cookieToken.length) {
+    console.log("[CSRF] Length mismatch");
+    return false;
+  }
 
   try {
     const a = Buffer.from(headerToken, "utf8");
     const b = Buffer.from(cookieToken, "utf8");
-    return timingSafeEqual(a, b);
-  } catch {
+    const match = timingSafeEqual(a, b);
+    console.log("[CSRF] Match:", match);
+    return match;
+  } catch (err) {
+    console.error("[CSRF] Compare error:", err);
     return false;
   }
 }

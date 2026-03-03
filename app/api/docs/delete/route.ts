@@ -1,10 +1,6 @@
 /**
  * DELETE /api/docs/delete
  * Delete a doc file, folder, or entire stream.
- *
- * Body: { type: 'doc'|'folder'|'stream', stream?, slugPath?, title? }
- * - doc/folder: writer with stream access OR admin
- * - stream: admin only
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -17,6 +13,7 @@ const schema = z.object({
   type: z.enum(["doc", "folder", "stream"]),
   stream: z.string().max(64).optional(),
   slugPath: z.array(z.string().max(128)).max(10).optional(),
+  format: z.enum(["mdx", "html", "tex"]).optional(),
 });
 
 export async function DELETE(request: NextRequest): Promise<NextResponse> {
@@ -42,7 +39,7 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
   if (!parsed.success)
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
 
-  const { type, stream, slugPath } = parsed.data;
+  const { type, stream, slugPath, format } = parsed.data;
 
   try {
     if (type === "stream") {
@@ -66,19 +63,18 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
         { error: "stream is required" },
         { status: 400 },
       );
-    if (session.role === "writer" && !session.teams.includes(stream)) {
+    if (session.role === "writer" && !session.teams.includes(stream))
       return NextResponse.json(
         { error: "No write access to this stream" },
         { status: 403 },
       );
-    }
 
     const p = slugPath ?? [];
 
     if (type === "folder") {
       await deleteFolder(stream, p);
     } else {
-      await deleteDoc(stream, p);
+      await deleteDoc(stream, p, format);
     }
 
     revalidatePath("/docs", "layout");

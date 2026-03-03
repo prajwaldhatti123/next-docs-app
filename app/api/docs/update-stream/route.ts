@@ -1,6 +1,6 @@
 /**
  * PATCH /api/docs/update-stream
- * Update stream metadata (_meta.json). Admin only.
+ * Update stream metadata (_meta.json).
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -11,7 +11,7 @@ import { revalidatePath } from "next/cache";
 
 const schema = z.object({
   stream: z.string().min(1).max(64),
-  label: z.string().min(1).max(200).optional(),
+  label: z.string().min(1).max(100).optional(),
   description: z.string().max(500).optional(),
   icon: z.string().max(10).optional(),
   color: z.enum(["blue", "purple", "green", "orange", "gray"]).optional(),
@@ -21,11 +21,14 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
   const session = await getSession();
   if (!session)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Only admins can update stream settings
   if (session.role !== "admin")
     return NextResponse.json(
       { error: "Admin access required" },
       { status: 403 },
     );
+
   if (!validateCsrfToken(request))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
@@ -47,7 +50,11 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
 
   try {
     await updateStreamMeta(stream, meta);
+
+    // Clear caches
+    revalidatePath("/dashboard");
     revalidatePath("/docs", "layout");
+
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("[docs/update-stream]", err);

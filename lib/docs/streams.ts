@@ -1,5 +1,5 @@
 import "server-only";
-import { list, put } from "@vercel/blob";
+import { list } from "@vercel/blob";
 import { unstable_cache } from "next/cache";
 
 export interface StreamMeta {
@@ -10,70 +10,41 @@ export interface StreamMeta {
   color: string;
 }
 
-const STREAM_DEFAULTS: Record<string, Partial<StreamMeta>> = {
-  tech: {
-    label: "Tech",
-    description: "Engineering docs, architecture, and API references.",
-    icon: "⚙️",
-    color: "blue",
-  },
-  marketing: {
-    label: "Marketing",
-    description: "Brand guidelines, campaigns, and go-to-market strategies.",
-    icon: "📣",
-    color: "purple",
-  },
-  sales: {
-    label: "Sales",
-    description: "Sales playbooks, pricing, and customer collateral.",
-    icon: "💼",
-    color: "green",
-  },
-  hr: {
-    label: "HR",
-    description: "Onboarding, policies, and people operations.",
-    icon: "👥",
-    color: "orange",
-  },
-};
-
 function toTitleCase(str: string): string {
-  return str.charAt(0).toUpperCase() + str.slice(1).replace(/-/g, " ");
+  return str
+    .split("-")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
 }
 
 async function fetchStreamList(): Promise<StreamMeta[]> {
+  const streamSlugs = new Set<string>();
+  const metaMap = new Map<string, Partial<StreamMeta>>();
   let blobs: any[] = [];
+  let cursor: string | undefined;
+
   try {
-    const res = await list({ prefix: "content/" });
-    blobs = res.blobs;
+    // List all files in the content directory using pagination
+    do {
+      const res: any = await list({ prefix: "content/", cursor });
+      blobs.push(...res.blobs);
+      cursor = res.cursor;
+    } while (cursor);
   } catch (error) {
     console.error("Vercel Blob list error:", error);
     return [];
   }
 
-  const streamSlugs = new Set<string>();
-  const metaMap = new Map<string, Partial<StreamMeta>>();
-
   for (const blob of blobs) {
     const parts = blob.pathname.split("/");
+    // path pattern: content/<stream>/...
     if (parts.length >= 2) {
-      streamSlugs.add(parts[1].toLowerCase());
+      const slug = parts[1].toLowerCase();
+      if (slug) streamSlugs.add(slug);
     }
   }
 
-  const requiredStreams = ["tech", "marketing", "sales"];
-  for (const req of requiredStreams) {
-    if (!streamSlugs.has(req)) {
-      streamSlugs.add(req);
-      const defaults = STREAM_DEFAULTS[req] ?? {};
-      try {
-        await put(`content/${req}/_meta.json`, JSON.stringify(defaults), {
-          access: "public",
-          addRandomSuffix: false,
-        });
-      } catch (err) {}
-    }
-  }
+  // Streams are fully dynamic — only what exists in blob appears in the UI.
 
   // Fetch meta json blobs in parallel
   const metaBlobs = blobs.filter(
@@ -84,7 +55,7 @@ async function fetchStreamList(): Promise<StreamMeta[]> {
     metaBlobs.map(async (blob) => {
       const slug = blob.pathname.split("/")[1].toLowerCase();
       try {
-        const res = await fetch(blob.url);
+        const res = await fetch(blob.url, { cache: "no-store" });
         const str = await res.text();
         metaMap.set(slug, JSON.parse(str));
       } catch {}
@@ -94,16 +65,14 @@ async function fetchStreamList(): Promise<StreamMeta[]> {
   const streams: StreamMeta[] = [];
   for (const slug of Array.from(streamSlugs)) {
     const fileMeta = metaMap.get(slug) || {};
-    const defaults = STREAM_DEFAULTS[slug] ?? {};
     streams.push({
       slug,
-      label: fileMeta.label ?? defaults.label ?? toTitleCase(slug),
+      label: fileMeta.label ?? toTitleCase(slug),
       description:
         fileMeta.description ??
-        defaults.description ??
         `Documentation for the ${toTitleCase(slug)} team.`,
-      icon: fileMeta.icon ?? defaults.icon ?? "📄",
-      color: fileMeta.color ?? defaults.color ?? "gray",
+      icon: fileMeta.icon ?? "📄",
+      color: fileMeta.color ?? "gray",
     });
   }
 
@@ -115,7 +84,7 @@ export const getAvailableStreams = unstable_cache(
   ["available-streams"],
   {
     tags: ["docs"],
-    revalidate: process.env.NODE_ENV === "development" ? false : 3600,
+    revalidate: process.env.NODE_ENV === "development" ? 1 : 3600,
   },
 );
 

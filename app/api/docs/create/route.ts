@@ -1,13 +1,6 @@
 /**
  * POST /api/docs/create
- * Create a new doc, folder, or stream.
- *
- * Body:
- *   type: 'doc' | 'folder' | 'stream'
- *   stream: string        (required for doc/folder)
- *   slugPath: string[]    (path segments for doc/folder)
- *   title: string
- *   meta?: { description, icon, color }  (for stream)
+ * Create a new doc (any format), folder, or stream.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -21,6 +14,7 @@ const baseSchema = z.object({
   stream: z.string().max(64).optional(),
   slugPath: z.array(z.string().max(128)).max(10).optional(),
   title: z.string().min(1).max(200),
+  format: z.enum(["mdx", "html", "tex"]).optional().default("mdx"),
   meta: z
     .object({
       description: z.string().max(500).optional().default(""),
@@ -59,11 +53,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       { status: 400 },
     );
 
-  const { type, stream, slugPath, title, meta } = parsed.data;
+  const { type, stream, slugPath, title, format, meta } = parsed.data;
 
   try {
     if (type === "stream") {
-      // Only admins can create streams
       if (session.role !== "admin")
         return NextResponse.json(
           { error: "Admin access required" },
@@ -88,13 +81,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         { status: 400 },
       );
 
-    // Writers must have access to the target stream
-    if (session.role === "writer" && !session.teams.includes(stream)) {
+    if (session.role === "writer" && !session.teams.includes(stream))
       return NextResponse.json(
         { error: "No write access to this stream" },
         { status: 403 },
       );
-    }
 
     const path = slugPath ?? [];
 
@@ -105,9 +96,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // type === 'doc'
-    const { slug } = await createDoc(stream, path, title);
+    const { slug } = await createDoc(stream, path, title, format);
     revalidatePath("/docs", "layout");
-    return NextResponse.json({ success: true, slug: slug.join("/") });
+    return NextResponse.json({ success: true, slug: slug.join("/"), format });
   } catch (err) {
     console.error("[docs/create]", err);
     return NextResponse.json(

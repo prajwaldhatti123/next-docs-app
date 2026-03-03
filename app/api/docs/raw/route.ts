@@ -32,10 +32,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   const slug = slugStr.split("/").filter(Boolean);
-  const raw = await readRawDoc(stream, slug);
+  const docResult = await readRawDoc(stream, slug);
 
-  if (!raw)
+  if (!docResult)
     return NextResponse.json({ error: "Doc not found" }, { status: 404 });
 
-  return NextResponse.json({ content: raw }, { status: 200 });
+  return NextResponse.json(
+    { content: docResult.raw, format: docResult.format },
+    { status: 200 },
+  );
 }

@@ -16,7 +16,7 @@ const ROLE_BADGE: Record<UserRole, { label: string; color: string }> = {
 };
 
 export default function Navbar({ username, stream, role }: NavbarProps) {
-  const badge = role ? ROLE_BADGE[role] : null;
+  // const badge = role ? ROLE_BADGE[role] : null;
 
   return (
     <nav className="navbar" aria-label="Main navigation">
@@ -39,14 +39,14 @@ export default function Navbar({ username, stream, role }: NavbarProps) {
       {!stream && <div style={{ flex: 1 }} />}
 
       <div className="navbar-right">
-        {badge && (
+        {/* {badge && (
           <span
             className="navbar-role-badge"
             style={{ color: badge.color, borderColor: badge.color }}
           >
             {badge.label}
           </span>
-        )}
+        )} */}
         <span className="navbar-user" title={`Logged in as ${username}`}>
           {username}
         </span>

@@ -1,7 +1,6 @@
 /**
  * POST /api/docs/save
- * Save (overwrite) an existing MDX doc.
- * Requires: writer with stream access, or admin.
+ * Save (overwrite) an existing doc. Accepts any format.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -17,7 +16,8 @@ const schema = z.object({
     .max(64)
     .regex(/^[a-z0-9_-]+$/),
   slug: z.array(z.string().min(1).max(128)).min(1).max(10),
-  content: z.string().min(1).max(500_000), // 500 KB max
+  content: z.string().min(1).max(2_000_000), // 2 MB max (LaTeX/HTML can be larger)
+  format: z.enum(["mdx", "html", "tex"]).optional().default("mdx"),
 });
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -43,17 +43,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   if (!parsed.success)
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
 
-  const { stream, slug, content } = parsed.data;
+  const { stream, slug, content, format } = parsed.data;
 
-  if (session.role === "writer" && !session.teams.includes(stream)) {
+  if (session.role === "writer" && !session.teams.includes(stream))
     return NextResponse.json(
       { error: "No write access to this stream" },
       { status: 403 },
     );
-  }
 
   try {
-    await saveDoc(stream, slug, content);
+    await saveDoc(stream, slug, content, format);
     revalidatePath("/docs", "layout");
     return NextResponse.json({ success: true });
   } catch (err) {

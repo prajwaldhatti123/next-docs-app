@@ -48,7 +48,7 @@ function extractStream(pathname: string): string | null {
   return match ? match[1] : null;
 }
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Always apply security headers — clone a base response first

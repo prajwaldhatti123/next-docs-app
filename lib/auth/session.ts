@@ -57,8 +57,8 @@ export function setSessionCookie(response: NextResponse, token: string): void {
   response.cookies.set(COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: SESSION_DURATION_SECONDS,
+    sameSite: "lax",
+    expires: new Date(Date.now() + SESSION_DURATION_SECONDS * 1000),
     path: "/",
   });
 }
@@ -67,8 +67,8 @@ export function clearSessionCookie(response: NextResponse): void {
   response.cookies.set(COOKIE_NAME, "", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: 0,
+    sameSite: "lax",
+    expires: new Date(0),
     path: "/",
   });
 }

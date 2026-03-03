@@ -1,0 +1,45 @@
+
+> docs@0.1.0 dev
+> next dev
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.12:3000
+- Environments: .env.local
+
+✓ Starting...
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+✓ Ready in 939ms
+ GET /dashboard 200 in 3.8s (compile: 1089ms, proxy.ts: 231ms, render: 2.5s)
+[CSRF] Header: 2902211cc6afbb81d7d19a32aa3765e1e570aa21
+[CSRF] Cookie: 2902211cc6afbb81d7d19a32aa3765e1e570aa21
+[CSRF] Match: true
+"revalidateTag" without the second argument is now deprecated, add second argument of "max" or use "updateTag". See more info here: https://nextjs.org/docs/messages/revalidate-tag-single-arg
+ PATCH /api/docs/update-stream 200 in 2.0s (compile: 345ms, proxy.ts: 10ms, render: 1693ms)
+ GET /api/csrf 200 in 211ms (compile: 152ms, proxy.ts: 24ms, render: 36ms)
+ GET /api/csrf 200 in 58ms (compile: 24ms, proxy.ts: 13ms, render: 21ms)
+ GET /api/csrf 200 in 74ms (compile: 46ms, proxy.ts: 12ms, render: 16ms)
+ GET /docs/marketing 200 in 3.2s (compile: 1147ms, proxy.ts: 15ms, render: 1990ms)
+ GET /dashboard 200 in 768ms (compile: 9ms, proxy.ts: 9ms, render: 749ms)
+ GET /api/csrf 200 in 47ms (compile: 18ms, proxy.ts: 15ms, render: 15ms)
+ GET /api/csrf 200 in 52ms (compile: 31ms, proxy.ts: 10ms, render: 11ms)
+[CSRF] Header: 2902211cc6afbb81d7d19a32aa3765e1e570aa21
+[CSRF] Cookie: 2902211cc6afbb81d7d19a32aa3765e1e570aa21
+[CSRF] Match: true
+"revalidateTag" without the second argument is now deprecated, add second argument of "max" or use "updateTag". See more info here: https://nextjs.org/docs/messages/revalidate-tag-single-arg
+ POST /api/docs/create 200 in 3.2s (compile: 759ms, proxy.ts: 15ms, render: 2.4s)
+ GET /dashboard 200 in 829ms (compile: 53ms, proxy.ts: 11ms, render: 764ms)
+ GET /docs/stream-1 200 in 1758ms (compile: 61ms, proxy.ts: 15ms, render: 1682ms)
+ GET /api/csrf 200 in 46ms (compile: 25ms, proxy.ts: 15ms, render: 7ms)
+ GET /api/csrf 200 in 46ms (compile: 24ms, proxy.ts: 9ms, render: 13ms)
+ GET /dashboard 200 in 1439ms (compile: 12ms, proxy.ts: 9ms, render: 1418ms)
+ GET /api/csrf 200 in 121ms (compile: 92ms, proxy.ts: 14ms, render: 15ms)
+ GET /api/csrf 200 in 132ms (compile: 107ms, proxy.ts: 15ms, render: 10ms)
+ GET /docs/stream-1/welcome 200 in 4.1s (compile: 1929ms, proxy.ts: 19ms, render: 2.2s)
+ GET /docs/stream-1/welcome 200 in 4.1s (compile: 1904ms, proxy.ts: 12ms, render: 2.2s)
+[CSRF] Header: 2902211cc6afbb81d7d19a32aa3765e1e570aa21
+[CSRF] Cookie: 2902211cc6afbb81d7d19a32aa3765e1e570aa21
+[CSRF] Match: true
+"revalidateTag" without the second argument is now deprecated, add second argument of "max" or use "updateTag". See more info here: https://nextjs.org/docs/messages/revalidate-tag-single-arg
+ DELETE /api/docs/delete 200 in 1408ms (compile: 596ms, proxy.ts: 11ms, render: 801ms)
+ GET /dashboard 200 in 455ms (compile: 40ms, proxy.ts: 7ms, render: 408ms)
