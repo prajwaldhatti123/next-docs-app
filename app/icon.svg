@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="docGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4facfe" />
+      <stop offset="100%" stop-color="#00f2fe" />
+    </linearGradient>
+    <linearGradient id="nodeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c471ed" />
+      <stop offset="100%" stop-color="#f64f59" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Document Shape -->
+  <path d="M128 48 C92.65 48 64 76.65 64 112 L64 400 C64 435.35 92.65 464 128 464 L384 464 C419.35 464 448 435.35 448 400 L448 176 L320 48 Z" fill="rgba(0, 195, 255, 0.05)" stroke="url(#docGrad)" stroke-width="32" stroke-linejoin="round" />
+  
+  <!-- Fold -->
+  <path d="M320 48 L320 176 L448 176" fill="rgba(0, 195, 255, 0.1)" stroke="url(#docGrad)" stroke-width="32" stroke-linejoin="round" />
+
+  <!-- Nodes and Connections -->
+  <g filter="url(#glow)">
+    <line x1="180" y1="240" x2="330" y2="280" stroke="url(#nodeGrad)" stroke-width="10" />
+    <line x1="180" y1="240" x2="230" y2="380" stroke="url(#nodeGrad)" stroke-width="10" />
+    <line x1="330" y1="280" x2="230" y2="380" stroke="url(#nodeGrad)" stroke-width="10" />
+    <line x1="330" y1="280" x2="360" y2="360" stroke="url(#nodeGrad)" stroke-width="10" />
+    <line x1="230" y1="380" x2="360" y2="360" stroke="url(#nodeGrad)" stroke-width="10" />
+
+    <circle cx="180" cy="240" r="20" fill="url(#nodeGrad)" />
+    <circle cx="330" cy="280" r="28" fill="url(#nodeGrad)" />
+    <circle cx="230" cy="380" r="24" fill="url(#nodeGrad)" />
+    <circle cx="360" cy="360" r="16" fill="url(#nodeGrad)" />
+  </g>
+</svg>
