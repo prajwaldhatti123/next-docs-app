@@ -1,5 +1,12 @@
 import "server-only";
-import { put, del, list } from "@vercel/blob";
+import {
+  listObjects,
+  putObject,
+  readObjectText,
+  deleteObject,
+  deleteObjects,
+  type StorageBlob,
+} from "@/lib/storage/gcs";
 import { revalidatePath, revalidateTag } from "next/cache";
 
 // ─── Types & Constants ─────────────────────────────────────────────────────────
@@ -52,12 +59,12 @@ export async function clearDocsCache() {
 /**
  * Helper to fetch all blobs matching a prefix, handling pagination.
  */
-async function listAllBlobs(prefix: string): Promise<any[]> {
-  const blobs: any[] = [];
+async function listAllBlobs(prefix: string): Promise<StorageBlob[]> {
+  const blobs: StorageBlob[] = [];
   let cursor: string | undefined;
   try {
     do {
-      const res: any = await list({ prefix, cursor });
+      const res = await listObjects(prefix, cursor);
       blobs.push(...res.blobs);
       cursor = res.cursor;
     } while (cursor);
@@ -69,9 +76,9 @@ async function listAllBlobs(prefix: string): Promise<any[]> {
 
 /** Check every possible extension for a slug and return the first match */
 async function findDocBlob(
-  blobs: any[],
+  blobs: StorageBlob[],
   base: string,
-): Promise<{ blob: any; format: DocFormat } | null> {
+): Promise<{ blob: StorageBlob; format: DocFormat } | null> {
   const candidates: [string, DocFormat][] = [
     [`${base}.mdx`, "mdx"],
     [`${base}.html`, "html"],
@@ -108,10 +115,9 @@ export async function readRawDoc(
 
     if (!found) return null;
 
-    const res = await fetch(found.blob.url, { cache: "no-store" });
-    if (!res.ok) return null;
-
-    return { raw: await res.text(), format: found.format };
+    const raw = await readObjectText(found.blob.pathname);
+    if (!raw) return null;
+    return { raw, format: found.format };
   } catch (err) {
     console.error("[readRawDoc] error:", err);
     return null;
@@ -130,11 +136,13 @@ export async function saveDoc(
   const ext = FORMAT_EXT[format];
   const path = `content/${stream.toLowerCase()}/${slug.join("/")}.${ext}`;
 
-  await put(path, content, {
-    access: "public",
-    addRandomSuffix: false,
-    allowOverwrite: true,
-  });
+  const contentType =
+    format === "html"
+      ? "text/html; charset=utf-8"
+      : format === "tex"
+        ? "application/x-tex; charset=utf-8"
+        : "text/markdown; charset=utf-8";
+  await putObject(path, content, contentType);
 
   await clearDocsCache();
 }
@@ -165,11 +173,13 @@ export async function createDoc(
   }
 
   const content = FORMAT_TEMPLATE[format](title);
-  await put(path, content, {
-    access: "public",
-    addRandomSuffix: false,
-    allowOverwrite: true,
-  });
+  const contentType =
+    format === "html"
+      ? "text/html; charset=utf-8"
+      : format === "tex"
+        ? "application/x-tex; charset=utf-8"
+        : "text/markdown; charset=utf-8";
+  await putObject(path, content, contentType);
 
   await clearDocsCache();
   return { content, slug: safeSlug, format };
@@ -193,11 +203,7 @@ export async function createFolder(
   }
 
   const indexStr = `---\ntitle: "${title}"\ndescription: ""\norder: 99\n---\n\n# ${title}\n`;
-  await put(path, indexStr, {
-    access: "public",
-    addRandomSuffix: false,
-    allowOverwrite: true,
-  });
+  await putObject(path, indexStr, "text/markdown; charset=utf-8");
 
   await clearDocsCache();
 }
@@ -207,7 +213,7 @@ export async function createFolder(
  */
 export async function createStream(
   streamSlug: string,
-  meta: any,
+  meta: Record<string, unknown>,
 ): Promise<void> {
   const safe = sanitizeName(streamSlug);
   if (!safe) throw new Error("Invalid stream name.");
@@ -220,17 +226,17 @@ export async function createStream(
 
   const welcome = `---\ntitle: "Welcome to ${meta.label || streamSlug}"\ndescription: "${meta.description || ""}"\norder: 1\n---\n\n# Welcome to ${meta.label || streamSlug}\n\n${meta.description || ""}\n\nStart adding documentation here.\n`;
 
-  await put(`content/${safe}/welcome.mdx`, welcome, {
-    access: "public",
-    addRandomSuffix: false,
-    allowOverwrite: true,
-  });
+  await putObject(
+    `content/${safe}/welcome.mdx`,
+    welcome,
+    "text/markdown; charset=utf-8",
+  );
 
-  await put(metaPath, JSON.stringify(meta, null, 2), {
-    access: "public",
-    addRandomSuffix: false,
-    allowOverwrite: true,
-  });
+  await putObject(
+    metaPath,
+    JSON.stringify(meta, null, 2),
+    "application/json; charset=utf-8",
+  );
 
   await clearDocsCache();
 }
@@ -240,19 +246,19 @@ export async function createStream(
  */
 export async function updateStreamMeta(
   streamSlug: string,
-  meta: any,
+  meta: Record<string, unknown>,
 ): Promise<void> {
   const safe = streamSlug.toLowerCase(); // Should already be safe
   const path = `content/${safe}/_meta.json`;
 
-  let existing = {};
+  let existing: Record<string, unknown> = {};
   try {
     const blobs = await listAllBlobs(path);
     const b = blobs.find((b) => b.pathname === path);
     if (b) {
-      const res = await fetch(b.url, { cache: "no-store" });
-      if (res.ok) {
-        existing = await res.json();
+      const raw = await readObjectText(b.pathname);
+      if (raw) {
+        existing = JSON.parse(raw);
       }
     }
   } catch (err) {
@@ -261,11 +267,11 @@ export async function updateStreamMeta(
 
   const merged = { ...existing, ...meta };
 
-  await put(path, JSON.stringify(merged, null, 2), {
-    access: "public",
-    addRandomSuffix: false,
-    allowOverwrite: true,
-  });
+  await putObject(
+    path,
+    JSON.stringify(merged, null, 2),
+    "application/json; charset=utf-8",
+  );
 
   await clearDocsCache();
 }
@@ -283,7 +289,7 @@ export async function deleteDoc(
 
   if (format) {
     const path = `${base}.${FORMAT_EXT[format]}`;
-    await del(path).catch(() => {});
+    await deleteObject(path).catch(() => {});
   } else {
     // Try all formats
     const blobs = await listAllBlobs(base);
@@ -291,7 +297,7 @@ export async function deleteDoc(
       Object.values(FORMAT_EXT).some((ext) => b.pathname === `${base}.${ext}`),
     );
     if (targets.length > 0) {
-      await del(targets.map((b) => b.url)).catch(() => {});
+      await deleteObjects(targets.map((b) => b.pathname)).catch(() => {});
     }
   }
 
@@ -308,10 +314,10 @@ export async function deleteFolder(
   const streamLower = stream.toLowerCase();
   const prefix = `content/${streamLower}/${folderPath.join("/")}/`;
   const blobs = await listAllBlobs(prefix);
-  const urls = blobs.map((b) => b.url);
+  const paths = blobs.map((b) => b.pathname);
 
-  if (urls.length > 0) {
-    await del(urls).catch(() => {});
+  if (paths.length > 0) {
+    await deleteObjects(paths).catch(() => {});
   }
 
   await clearDocsCache();
@@ -324,10 +330,10 @@ export async function deleteStream(streamSlug: string): Promise<void> {
   const safe = sanitizeName(streamSlug);
   const prefix = `content/${safe}/`;
   const blobs = await listAllBlobs(prefix);
-  const urls = blobs.map((b) => b.url);
+  const paths = blobs.map((b) => b.pathname);
 
-  if (urls.length > 0) {
-    await del(urls).catch(() => {});
+  if (paths.length > 0) {
+    await deleteObjects(paths).catch(() => {});
   }
 
   await clearDocsCache();

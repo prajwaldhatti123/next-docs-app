@@ -1,5 +1,9 @@
 import "server-only";
-import { list } from "@vercel/blob";
+import {
+  listObjects,
+  readObjectText,
+  type StorageBlob,
+} from "@/lib/storage/gcs";
 import { unstable_cache } from "next/cache";
 
 export interface StreamMeta {
@@ -20,18 +24,18 @@ function toTitleCase(str: string): string {
 async function fetchStreamList(): Promise<StreamMeta[]> {
   const streamSlugs = new Set<string>();
   const metaMap = new Map<string, Partial<StreamMeta>>();
-  let blobs: any[] = [];
+  const blobs: StorageBlob[] = [];
   let cursor: string | undefined;
 
   try {
     // List all files in the content directory using pagination
     do {
-      const res: any = await list({ prefix: "content/", cursor });
+      const res = await listObjects("content/", cursor);
       blobs.push(...res.blobs);
       cursor = res.cursor;
     } while (cursor);
   } catch (error) {
-    console.error("Vercel Blob list error:", error);
+    console.error("Storage list error:", error);
     return [];
   }
 
@@ -55,9 +59,8 @@ async function fetchStreamList(): Promise<StreamMeta[]> {
     metaBlobs.map(async (blob) => {
       const slug = blob.pathname.split("/")[1].toLowerCase();
       try {
-        const res = await fetch(blob.url, { cache: "no-store" });
-        const str = await res.text();
-        metaMap.set(slug, JSON.parse(str));
+        const raw = await readObjectText(blob.pathname);
+        if (raw) metaMap.set(slug, JSON.parse(raw));
       } catch {}
     }),
   );

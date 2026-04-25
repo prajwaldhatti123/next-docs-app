@@ -1,6 +1,10 @@
 import "server-only";
 import matter from "gray-matter";
-import { list } from "@vercel/blob";
+import {
+  listObjects,
+  readObjectText,
+  type StorageBlob,
+} from "@/lib/storage/gcs";
 import { unstable_cache } from "next/cache";
 import type { DocFormat } from "./write";
 
@@ -43,11 +47,11 @@ function stripDocExtension(name: string): string {
 }
 
 async function buildSidebar(stream: string): Promise<SidebarItem[]> {
-  let blobs: any[] = [];
+  const blobs: StorageBlob[] = [];
   let cursor: string | undefined;
   try {
     do {
-      const res: any = await list({ prefix: `content/${stream}/`, cursor });
+      const res = await listObjects(`content/${stream}/`, cursor);
       blobs.push(...res.blobs);
       cursor = res.cursor;
     } while (cursor);
@@ -55,9 +59,15 @@ async function buildSidebar(stream: string): Promise<SidebarItem[]> {
     return [];
   }
 
-  const itemMap = new Map<string, any>();
+  const itemMap = new Map<string, SidebarItem>();
   const rootPath = `content/${stream}`;
-  itemMap.set(rootPath, { children: [], isFolder: true, fullPath: rootPath });
+  itemMap.set(rootPath, {
+    title: stream,
+    slug: stream,
+    order: 0,
+    children: [],
+    isFolder: true,
+  });
 
   // Include all supported doc formats, skip internal files (_*, .*)
   const docBlobs = blobs.filter((b) => {
@@ -92,8 +102,7 @@ async function buildSidebar(stream: string): Promise<SidebarItem[]> {
         // index.mdx describes its parent folder
         let raw = "";
         try {
-          const res = await fetch(blob.url, { cache: "no-store" });
-          raw = await res.text();
+          raw = (await readObjectText(blob.pathname)) ?? "";
         } catch {}
         const { data } = matter(raw);
         const folderObj = itemMap.get(currentPath);
@@ -111,8 +120,7 @@ async function buildSidebar(stream: string): Promise<SidebarItem[]> {
           // Parse frontmatter for MDX
           let raw = "";
           try {
-            const res = await fetch(blob.url, { cache: "no-store" });
-            raw = await res.text();
+            raw = (await readObjectText(blob.pathname)) ?? "";
           } catch {}
           const { data } = matter(raw);
           title =
@@ -124,8 +132,7 @@ async function buildSidebar(stream: string): Promise<SidebarItem[]> {
           // Extract <title> from HTML if present
           let raw = "";
           try {
-            const res = await fetch(blob.url, { cache: "no-store" });
-            raw = await res.text();
+            raw = (await readObjectText(blob.pathname)) ?? "";
           } catch {}
           const htmlTitle = raw
             .match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]
@@ -135,8 +142,7 @@ async function buildSidebar(stream: string): Promise<SidebarItem[]> {
           // LaTeX: extract \title{...} if present
           let raw = "";
           try {
-            const res = await fetch(blob.url, { cache: "no-store" });
-            raw = await res.text();
+            raw = (await readObjectText(blob.pathname)) ?? "";
           } catch {}
           const texTitle = raw.match(/\\title\{([^}]+)\}/)?.[1]?.trim();
           title = texTitle ?? toTitleCase(stripDocExtension(filename));

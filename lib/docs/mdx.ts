@@ -5,7 +5,11 @@ import remarkGfm from "remark-gfm";
 import rehypePrettyCode from "rehype-pretty-code";
 import rehypeSlug from "rehype-slug";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
-import { list } from "@vercel/blob";
+import {
+  listObjects,
+  readObjectText,
+  type StorageBlob,
+} from "@/lib/storage/gcs";
 import { unstable_cache } from "next/cache";
 import type { MDXRemoteProps } from "next-mdx-remote/rsc";
 import type { ReactElement } from "react";
@@ -30,9 +34,9 @@ type Components = MDXRemoteProps["components"];
 // ─── Multi-format blob lookup ─────────────────────────────────────────────────
 
 async function findDocBlobInternal(
-  blobs: any[],
+  blobs: StorageBlob[],
   base: string,
-): Promise<{ blob: any; format: DocFormat } | null> {
+): Promise<{ blob: StorageBlob; format: DocFormat } | null> {
   const candidates: [string, DocFormat][] = [
     [`${base}.mdx`, "mdx"],
     [`${base}.html`, "html"],
@@ -50,9 +54,9 @@ async function findDocBlobInternal(
 
 export const getDocRaw = unstable_cache(
   async (stream: string, slugStr: string): Promise<RawDocResult | null> => {
-    let blobs: any[] = [];
+    let blobs: StorageBlob[] = [];
     try {
-      const res = await list({ prefix: `content/${stream}/` });
+      const res = await listObjects(`content/${stream}/`);
       blobs = res.blobs;
     } catch {
       return null;
@@ -64,8 +68,9 @@ export const getDocRaw = unstable_cache(
     if (!found) return null;
 
     try {
-      const res = await fetch(found.blob.url);
-      return { raw: await res.text(), format: found.format };
+      const raw = await readObjectText(found.blob.pathname);
+      if (!raw) return null;
+      return { raw, format: found.format };
     } catch {
       return null;
     }
@@ -81,9 +86,9 @@ export const getDocRaw = unstable_cache(
 
 export const getMdxRawSource = unstable_cache(
   async (stream: string, slugStr: string): Promise<string | null> => {
-    let blobs: any[] = [];
+    let blobs: StorageBlob[] = [];
     try {
-      const res = await list({ prefix: `content/${stream}/` });
+      const res = await listObjects(`content/${stream}/`);
       blobs = res.blobs;
     } catch {
       return null;
@@ -95,8 +100,7 @@ export const getMdxRawSource = unstable_cache(
     if (!found) return null;
 
     try {
-      const fetchedRes = await fetch(found.blob.url);
-      return await fetchedRes.text();
+      return await readObjectText(found.blob.pathname);
     } catch {
       return null;
     }
@@ -110,7 +114,9 @@ export const getMdxRawSource = unstable_cache(
 
 // ─── MDX compiler ─────────────────────────────────────────────────────────────
 
-const MDX_OPTIONS = {
+const MDX_OPTIONS: NonNullable<
+  Parameters<typeof compileMDX<DocFrontmatter>>[0]["options"]
+> = {
   parseFrontmatter: true,
   mdxOptions: {
     remarkPlugins: [remarkGfm],
@@ -151,7 +157,7 @@ export async function compileMdxFromRaw(
   const { content } = await compileMDX<DocFrontmatter>({
     source: rawSource,
     components,
-    options: MDX_OPTIONS as any,
+    options: MDX_OPTIONS,
   });
 
   return { content, frontmatter, rawSource };
