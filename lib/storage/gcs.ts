@@ -21,15 +21,18 @@ function createStorageClient(): Storage {
   const gcpServiceAccountEmail = process.env.GCP_SERVICE_ACCOUNT_EMAIL;
   const gcpPoolId = process.env.GCP_WORKLOAD_IDENTITY_POOL_ID;
   const gcpProviderId = process.env.GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID;
+  const wifEnv = {
+    GCP_PROJECT_ID: gcpProjectId,
+    GCP_PROJECT_NUMBER: gcpProjectNumber,
+    GCP_SERVICE_ACCOUNT_EMAIL: gcpServiceAccountEmail,
+    GCP_WORKLOAD_IDENTITY_POOL_ID: gcpPoolId,
+    GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID: gcpProviderId,
+  };
+  const missingWifVars = Object.entries(wifEnv)
+    .filter(([, value]) => !value)
+    .map(([key]) => key);
 
-  if (
-    isVercelRuntime &&
-    gcpProjectId &&
-    gcpProjectNumber &&
-    gcpServiceAccountEmail &&
-    gcpPoolId &&
-    gcpProviderId
-  ) {
+  if (isVercelRuntime && missingWifVars.length === 0) {
     const authClient = ExternalAccountClient.fromJSON({
       type: "external_account",
       audience: `//iam.googleapis.com/projects/${gcpProjectNumber}/locations/global/workloadIdentityPools/${gcpPoolId}/providers/${gcpProviderId}`,
@@ -50,6 +53,12 @@ function createStorageClient(): Storage {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Storage authClient type mismatch across nested google-auth-library copies
       authClient: authClient as any,
     });
+  }
+
+  if (isVercelRuntime && missingWifVars.length > 0) {
+    throw new Error(
+      `Missing required Vercel keyless GCP env vars: ${missingWifVars.join(", ")}`,
+    );
   }
 
   // Fallback for local/dev or non-federated environments.
